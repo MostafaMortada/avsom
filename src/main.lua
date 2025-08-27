@@ -40,6 +40,8 @@ local seed = math.random(0, 9999999999)
 local wrl = {}
 local floor = 1
 
+local turn = 0
+
 local player = {
 	x = 0, y = 0,
 
@@ -64,12 +66,12 @@ end
 inv[1] = {id=1, n=23}
 local equip = {[1]=1}
 
-local flavor = "Welcome!"
+--local flavor = "Welcome!"
 
 while true do
 	wrl[floor] = wrl[floor] or {}
-	player.x, player.y, wrl[floor].map, wrl[floor].shade = GENERATE_FLOOR(0, 140, 44)
-	local map, shade = wrl[floor].map, wrl[floor].shade
+	player.x, player.y, wrl[floor].map, wrl[floor].shade, wrl[floor].stt = GENERATE_FLOOR(0, 140, 44)
+	local map, shade, stt = wrl[floor].map, wrl[floor].shade, wrl[floor].stt
 
 	-- player in the center of the camera
 	local sx = math.max(0, math.min(MAP_WIDTH -70, player.x-35))
@@ -79,7 +81,7 @@ while true do
 	local key = ""
 
 	os.execute("clear")
-	while true do
+	while true do -- MAIN GAME LOOP & LOGIC
 
 		do -- this block just does lighting
 			local surround_wall = 0
@@ -140,6 +142,7 @@ while true do
 		io.write("\27[1;69HHP ",player.hp,"/",player.maxhp)
 		io.write("\27[1;2HSeed:",seed)
 		io.write("\27[1;20HFloor ",floor)
+		io.write("\27[1;40HTurn ",turn)
 
 		io.write("\27[23;1HPos: ",player.x," , ",player.y," ")
 		--io.write("\27[24;1H",flavor, (" "):rep(80-flavor:len()))
@@ -153,6 +156,10 @@ while true do
 		local act = C.key[key]
 
 		if act and key~="" then
+			if act == "UP" or act == "DOWN" or act == "LEFT" or act == "RIGHT"
+			or act == "UP LEFT" or act == "DOWN LEFT" or act == "UP RIGHT" or act == "DOWN RIGHT" then
+				turn = turn + 1
+			end
 			-- the following 4 lines scroll the camera when the player approaches the edge of the screen
 			if player.x-sx<=10 then sx = sx - 10 end
 			if player.x-sx>=60 then sx = sx + 10 end
@@ -178,6 +185,62 @@ while true do
 				player.x, player.y = prev_px, prev_py
 			end
 
+			if act == "UPGRADE MENU" then -- UPGRADE MENU
+				os.execute("clear")
+				local i,sel,entryname = 1, 1, {[1]="atk",[2]="def",[3]="rng",[4]="mna"}
+				repeat
+					io.write("\27[2;1H\27[0;7m Upgrade your stats \n\27[0mYou have \27[32m", player.upt, "\27[0m upgrade points (UPT)  ")
+					io.write("\27[4;72HUPT ",player.upt," ")
+					io.write("\27[6;70H1.ATK ",player.atk)
+					io.write("\27[7;70H2.DEF ",player.def)
+					io.write("\27[8;70H3.RNG ",player.rng)
+					io.write("\27[9;70H4.MNA ",player.mna)
+					for o = 1, 4 do
+						io.write("\27[",o+5,";68H ")
+					end
+					io.write("\27[",sel+5,";68H>\27[H")
+					i = getch()
+					local tmp = tonumber(i)
+					if tmp==nil then
+					elseif tmp>4 then
+					else
+						sel = tmp
+					end
+					if i == "P" and player.upt > 0 then
+						player[entryname[sel]] = player[entryname[sel]] + 1
+						player.upt = player.upt - 1
+					end
+				until i == "w" or i == "\27"
+				os.execute("clear")
+			end
+
+			if act == "SYS: CLEAR SCREEN" then
+				os.execute("clear")
+			end
+
+			if act == "SYS: QUIT GAME" then
+				io.write("\27[H\27[0;41;1m Are you sure you want to quit? y/n \27[0m")
+				local o = ""
+				repeat
+					o = string.lower(getch())
+				until o=="y" or o=="n" or o=="\27"
+				os.execute("clear")
+				if o=="y" then
+					os.exit()
+				end
+			end
 		end
+
+		if key == "1" then -- !!! THIS IS FOR DEBUGGING PURPOSES ONLY !!! (remind me to remove this later)
+			io.write("\27[0m\27[2;1H")
+			for r = 1+sy, 22+sy do
+				for c = 1+sx, 70+sx do
+					io.write(("CBA0123"):sub(stt[r][c]+4, stt[r][c]+4))
+				end
+				io.write("\n")
+			end
+			io.read()
+		end
+
 	end
 end

@@ -39,6 +39,9 @@ return {
 		g = "TAKE",
 		["."] = "INTERACT",
 
-		["/"] = "UPGRADE_MENU"
+		["/"] = "UPGRADE MENU",
+
+		C = "SYS: CLEAR SCREEN",
+		Q = "SYS: QUIT GAME",
 	}
 }

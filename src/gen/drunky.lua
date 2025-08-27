@@ -1,12 +1,14 @@
 return function(floorseed, w, h)
 
-	local map, vis = {}, {}
+	local map, vis, stt = {}, {}, {}
 	for r = 1, h do
 		map[r] = {}
 		vis[r] = {}
+		stt[r] = {}
 		for c = 1, w do
 			map[r][c] = 1
 			vis[r][c] = 0
+			stt[r][c] = math.random(-3, 3)
 		end
 	end
 
@@ -56,5 +58,5 @@ return function(floorseed, w, h)
 
 	--dx, dy = math.floor(w/2), math.floor(h/2)
 
-	return dx, dy, map, vis
+	return dx, dy, map, vis, stt
 end
