@@ -99,7 +99,7 @@ while true do
 		end]]
 
 		do
-			for i = 0, math.pi * 2, math.pi/180 * 45 do
+			for i = 0, math.pi * 2, math.pi/180 * 4.5 do
 				local rx, ry, ix, iy = player.x, player.y, math.cos(i), math.sin(i)
 				local c
 				repeat
@@ -107,7 +107,7 @@ while true do
 					ry = ry + iy
 					c = map[math.floor(ry+.5)][math.floor(rx+.5)]
 					shade[math.floor(ry+.5)][math.floor(rx+.5)] = 0
-				until c == 1 or math.sqrt((player.y - ry)^2 + (player.x - rx)^2)>=(vis_radius[player.y][player.x]-1)
+				until c == 1 or c == 6 or math.sqrt((player.y - ry)^2 + (player.x - rx)^2)>=(vis_radius[player.y][player.x]-1)
 			end
 		end
 
