@@ -1,6 +1,7 @@
+-- ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
 local C = require("config")
-
+local ERR = require("src.error_messages")
 local TILE = require("tilesets." .. C.tileset)
 local TILENAMES = require("src.tilenames")
 local GENERATE_FLOOR = require("src.gen." .. C.generator)
@@ -60,7 +61,7 @@ local player = {
 }
 
 local inv = {}
-for i = 1, 26 do
+for i = 1, 26 do -- a-z
 	inv[i] = {id=0, n=0}
 end
 inv[1] = {id=1, n=23}
@@ -68,68 +69,89 @@ local equip = {[1]=1}
 
 --local flavor = "Welcome!"
 
+local S = " "
+local CLEAR_STR = "\27[1;1H" .. S:rep(79) .. "\27[24;1H" .. S:rep(79) .. "\27[2;71H" .. (S:rep(9).."\27[9D\27[B"):rep(22)
+
 while true do
 	wrl[floor] = wrl[floor] or {}
-	player.x, player.y, wrl[floor].map, wrl[floor].shade, wrl[floor].stt = GENERATE_FLOOR(0, 140, 44)
-	local map, shade, stt = wrl[floor].map, wrl[floor].shade, wrl[floor].stt
+	player.x, player.y, wrl[floor].map, wrl[floor].shade, wrl[floor].radius, wrl[floor].stt = GENERATE_FLOOR(0, 140, 44)
+	local map, shade, vis_radius, stt = wrl[floor].map, wrl[floor].shade, wrl[floor].radius, wrl[floor].stt
 
 	-- player in the center of the camera
 	local sx = math.max(0, math.min(MAP_WIDTH -70, player.x-35))
 	local sy = math.max(0, math.min(MAP_HEIGHT-22, player.y-11))
-
 
 	local key = ""
 
 	os.execute("clear")
 	while true do -- MAIN GAME LOOP & LOGIC
 
-		do -- this block just does lighting
-			local surround_wall = 0
-			for r = player.y-1, player.y+1 do
-				for c = player.x-1, player.x+1 do
-					surround_wall = surround_wall==-1 and -1 or surround_wall + (map[r][c]==1 and 1 or 0)
-					surround_wall = map[r][c]==6 and -1 or surround_wall
-				end
-			end
-			local vis_range = surround_wall>=C.light.wall_count and C.light.radius_hallway or surround_wall==-1 and C.light.radius_door or C.light.radius_open
-			for r = math.max(1, player.y-vis_range), math.min(MAP_HEIGHT, player.y+vis_range) do
-				for c = math.max(1, player.x-vis_range), math.min(MAP_WIDTH, player.x+vis_range) do
-					shade[r][c] = C.light.turns
-				end
-			end
-		end
+		sx = math.max(0, math.min(MAP_WIDTH -70, player.x-35))
+		sy = math.max(0, math.min(MAP_HEIGHT-22, player.y-11))
 
-		--os.execute("clear")
-		--io.write("\27[1;1HCROAGE\n")
-		io.write("\27[2;1H")
-		--[[for r = 1+sy, 22+sy do
-			for c = 1+sx, 70+sx do
-				--io.write(("#. <>+"):sub(map[r][c], map[r][c]))
-				io.write("\27[0m")
-				if shade[r][c]>0 then
-					if shade[r][c] ~= C.light.turns then -- tiles outside of the player's direct view are dimmed
-						io.write("\27[2m")
-					end
-					io.write(TILE[map[r][c] ])
-				else
-					io.write" "
-				end
-				if key~="" then
-					shade[r][c] = math.max(0, shade[r][c]-1)
-				end
+		--io.write(CLEAR_STR)
+
+		-- this loop uncovers tiles in the player's radius
+		--[[for r = math.max(1, player.y-vis_radius[player.y][player.x]), math.min(MAP_HEIGHT, player.y+vis_radius[player.y][player.x]) do
+			for c = math.max(1, player.x-vis_radius[player.y][player.x]), math.min(MAP_WIDTH, player.x+vis_radius[player.y][player.x]) do
+				shade[r][c] = 0
 			end
-			io.write("\n")
 		end]]
 
-		-- lighting system disabled :P
+		do
+			for i = 0, math.pi * 2, math.pi/180 * 45 do
+				local rx, ry, ix, iy = player.x, player.y, math.cos(i), math.sin(i)
+				local c
+				repeat
+					rx = rx + ix
+					ry = ry + iy
+					c = map[math.floor(ry+.5)][math.floor(rx+.5)]
+					shade[math.floor(ry+.5)][math.floor(rx+.5)] = 0
+				until c == 1 or math.sqrt((player.y - ry)^2 + (player.x - rx)^2)>=(vis_radius[player.y][player.x]-1)
+			end
+		end
+
+		--[[for r = math.max(1, player.y-vis_radius[player.y][player.x]), math.min(MAP_HEIGHT, player.y+vis_radius[player.y][player.x]) do
+			for c = math.max(1, player.x-vis_radius[player.y][player.x]), math.min(MAP_WIDTH, player.x+vis_radius[player.y][player.x]) do
+				shade[r][c] = 0
+			end
+		end]]
+
+		io.write("\27[2;1H")
 		for r = 1+sy, 22+sy do
 			for c = 1+sx, 70+sx do
-				--io.write(("#. <>+"):sub(map[r][c], map[r][c]))
 				io.write("\27[0m")
-				io.write(TILE[map[r][c] ])
+				if shade[r][c] then
+					io.write(TILE[map[r][c] ] or ERR.glyph_nil)
+				else
+					io.write(" ")
+				end
 			end
 			io.write("\n")
 		end
+
+--[[
+		io.write("\27[3;2H")
+		for r = 2+sy, 21+sy do
+			for c = 2+sx, 69+sx do
+				io.write("\27[0m")
+				if shade[r][c] then
+					if map[r][c] == 1 then
+						io.write("\27[1m")
+						if map[r][c-1] == 2 or map[r][c+1] == 2 then
+							io.write("|")
+						else
+							io.write("-")
+						end
+					else
+						io.write(TILE[map[r][c] ])
+					end
+				else
+					io.write(" ")
+				end
+			end
+			io.write("\n ")
+		end]]
 
 		-- Draw stats on the side of the screen
 		io.write("\27[0m\27[2;71H LVL ",player.lvl)
@@ -140,15 +162,21 @@ while true do
 		io.write("\27[8;71H RNG ",player.rng)
 		io.write("\27[9;71H MNA ",player.mna)
 		io.write("\27[1;69HHP ",player.hp,"/",player.maxhp)
-		io.write("\27[1;2HSeed:",seed)
+		io.write("\27[1;1H Seed:",seed)
 		io.write("\27[1;20HFloor ",floor)
 		io.write("\27[1;40HTurn ",turn)
 
-		io.write("\27[23;1HPos: ",player.x," , ",player.y," ")
-		--io.write("\27[24;1H",flavor, (" "):rep(80-flavor:len()))
-		io.write("\27[24;1HStanding on ",TILENAMES[map[player.y][player.x]], (" "):rep(67-TILENAMES[map[player.y][player.x]]:len()))
+		io.write("\27[19;72Hy k u")
+		io.write("\27[20;72H \\|/")
+		io.write("\27[21;72Hh-@-l")
+		io.write("\27[22;72H /|\\")
+		io.write("\27[23;72Hb j n")
 
-		io.write("\27[", player.y-sy+1, ";", player.x-sx, "H\27[0;1m@\27[D")
+		--io.write("\27[23;1HPos: ",player.x," , ",player.y," ")
+		--io.write("\27[24;1H",flavor, (" "):rep(80-flavor:len()))
+		io.write("\27[24;1HStanding on ",TILENAMES[map[player.y][player.x]] or ERR.tilename_nil, (" "):rep(67-(TILENAMES[map[player.y][player.x]] or ERR.tilename_nil):len()))
+
+		io.write("\27[", player.y-sy+1, ";", player.x-sx, "H\27[0;1m@\27[1;1H")
 
 		key = getch()
 		check_term_dim()
@@ -161,17 +189,14 @@ while true do
 				turn = turn + 1
 			end
 			-- the following 4 lines scroll the camera when the player approaches the edge of the screen
-			if player.x-sx<=10 then sx = sx - 10 end
+			--[[if player.x-sx<=10 then sx = sx - 10 end
 			if player.x-sx>=60 then sx = sx + 10 end
 			if player.y-sy<=5 then sy = sy - 7 end
 			if player.y-sy>=15 then sy = sy + 7 end
 
 			-- clamping
 			sx = math.max(0, math.min(MAP_WIDTH -70, sx))
-			sy = math.max(0, math.min(MAP_HEIGHT-22, sy))
-
-			sx = math.max(0, math.min(MAP_WIDTH -70, player.x-35))
-			sy = math.max(0, math.min(MAP_HEIGHT-22, player.y-11))
+			sy = math.max(0, math.min(MAP_HEIGHT-22, sy))]]
 
 			local prev_px, prev_py = player.x, player.y
 
@@ -181,7 +206,16 @@ while true do
 			--player.x = math.max(0, math.min(MAP_WIDTH , player.x + (act=="RIGHT" and 1 or act=="LEFT" and -1 or 0)))
 			--player.y = math.max(0, math.min(MAP_HEIGHT, player.y + (act=="DOWN" and 1 or act=="UP" and -1 or 0)))
 
-			if map[player.y][player.x] == 1 then -- Collision
+			if act == "DOOR" then
+				for i = -1, 1 do
+					if map[player.y][player.x+i] == 6 then map[player.y][player.x+i] = 7
+					elseif map[player.y][player.x+i] == 7 then map[player.y][player.x+i] = 6 end
+					if map[player.y+i][player.x] == 6 then map[player.y+i][player.x] = 7
+					elseif map[player.y+i][player.x] == 7 then map[player.y+i][player.x] = 6 end
+				end
+			end
+
+			if map[player.y][player.x] == 1 or map[player.y][player.x] == 3 or map[player.y][player.x] == 6 then -- Collision
 				player.x, player.y = prev_px, prev_py
 			end
 
@@ -210,7 +244,44 @@ while true do
 						player[entryname[sel]] = player[entryname[sel]] + 1
 						player.upt = player.upt - 1
 					end
-				until i == "w" or i == "\27"
+				until C.key[i] == "UPGRADE MENU" or i == "\27"
+				os.execute("clear")
+			end
+
+			if act == "INSPECT" then
+				local i, x, y = "", player.x, player.y
+				io.write("\27[0;1m")
+				repeat
+					io.write("\27[2;1H")
+					for r = 1+sy, 22+sy do
+						for c = 1+sx, 70+sx do
+							io.write("\27[0m")
+							if shade[r][c] then
+								io.write(TILE[map[r][c] ] or ERR.glyph_nil)
+							else
+								io.write(" ")
+							end
+						end
+						io.write("\n")
+					end
+
+					if shade[y][x] then
+						io.write("\27[24;1HHighlighted:",TILENAMES[map[y][x]] or ERR.tilename_nil, (" "):rep(67-(TILENAMES[map[y][x]] or ERR.tilename_nil):len()))
+					else
+						io.write("\27[24;1HHighlighted:                                                                   ")
+					end
+
+					io.write("\27[0;33;1m")
+					io.write("\27[", y-sy, ";", x-sx-1, "H\\ /")
+					io.write("\27[", y-sy+1, ";", x-sx-1, "H|")
+					io.write("\27[", y-sy+1, ";", x-sx+1, "H|")
+					io.write("\27[", y-sy+2, ";", x-sx-1, "H/ \\\27[1;1H")
+					io.write("\27[0m")
+					i = getch()
+					local a = C.key[i]
+					x = math.max(1, math.min(MAP_WIDTH , x + ((a=="RIGHT" or a=="UP RIGHT" or a=="DOWN RIGHT") and 1 or (a=="LEFT" or a=="UP LEFT" or a=="DOWN LEFT") and -1 or 0)))
+					y = math.max(1, math.min(MAP_HEIGHT, y + ((a=="DOWN" or a=="DOWN LEFT" or a=="DOWN RIGHT") and 1 or (a=="UP" or a=="UP LEFT" or a=="UP RIGHT") and -1 or 0)))
+				until i == "\27"
 				os.execute("clear")
 			end
 
@@ -239,6 +310,7 @@ while true do
 				end
 				io.write("\n")
 			end
+			io.write("\27[1;1H")
 			io.read()
 		end
 

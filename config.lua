@@ -5,16 +5,6 @@ return {
 	generator = "drunky", -- Algorithms in `/src/gen/`
 	tileset = "default", -- Tilesets in `/tilesets/`
 
-	light = {
-		wall_count = 5, -- Minimum amount of surrounding walls to be considered a hallway
-
-		radius_open = 3,
-		radius_hallway = 1,
-		radius_door = 6,
-
-		turns = 50, -- How many turns it takes until a tile is no longer visible
-	},
-
 	key = { -- Keymap
 		h = "LEFT",
 		j = "DOWN",
@@ -37,9 +27,13 @@ return {
 		d = "DROP",
 		D = "THROW",
 		g = "TAKE",
+
 		["."] = "INTERACT",
+		o = "DOOR",
 
 		["/"] = "UPGRADE MENU",
+
+		["-"] = "INSPECT",
 
 		C = "SYS: CLEAR SCREEN",
 		Q = "SYS: QUIT GAME",
