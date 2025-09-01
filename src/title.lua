@@ -1,7 +1,7 @@
 -- Why is this a separate file? idk
 os.execute("clear")
 io.write([[
-v1.0.0
+v?
                        __ ___   ____ ____    ___  __       __
                        /\  \     // //  \|  // \\  |\     /|
                       / \\  \   //  \\___  ||   || |\\   /||
