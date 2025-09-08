@@ -302,7 +302,7 @@ while true do
 			end
 		end
 
-		if key == "1" then -- !!! THIS IS FOR DEBUGGING PURPOSES ONLY !!! (remind me to remove this later)
+		if key == "~" then -- !!! THIS IS FOR DEBUGGING PURPOSES ONLY !!! (remind me to remove this later)
 			io.write("\27[0m\27[2;1H")
 			for r = 1+sy, 22+sy do
 				for c = 1+sx, 70+sx do

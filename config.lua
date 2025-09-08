@@ -16,6 +16,16 @@ return {
 		b = "DOWN LEFT",
 		n = "DOWN RIGHT",
 
+		["4"] = "LEFT",
+		["2"] = "DOWN",
+		["8"] = "UP",
+		["6"] = "RIGHT",
+
+		["7"] = "UP LEFT",
+		["9"] = "UP RIGHT",
+		["1"] = "DOWN LEFT",
+		["3"] = "DOWN RIGHT",
+
 		q = "DRINK",
 		e = "EAT",
 		z = "ZAP",
