@@ -71,7 +71,7 @@ return function(floorseed, w, h)
 					end
 				end
 			end
-			vis[r][c] = surround>=5 and 1 or 20
+			vis[r][c] = surround>=5 and 1 or 6
 
 			--[[if map[r][c] == 2 and surround>=5 then -- bro this is ass
 				for i = r-1, r+1 do

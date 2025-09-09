@@ -29,9 +29,42 @@ local function check_term_dim()
 	end
 end
 
+local function ask_direction(str)
+	io.write("\27[24;1H                                                                               ")
+	io.write("\27[24;1HEnter a direction for action: ", str)
+	local k, a
+	repeat
+		k = getch()
+		a = C.key[k]
+	until a == "UP" or a == "LEFT" or a == "DOWN" or a == "RIGHT"
+	or a == "UP LEFT" or a == "UP RIGHT" or a == "DOWN LEFT" or a == "DOWN RIGHT"
+	or a == "SYS: ESCAPE"
+
+	return a
+end
+
 check_term_dim()
 
-require("src.title") -- Display title screen
+local function title(tw, th)
+	tw, th = 2*math.floor(tw/2), 2*math.floor(th/2)
+	local logo = [[
+          __       __
+      (__/  ~-(O)-~  \__)
+
+S A N C T U A R Y   O F   T H E
+      L U N A R   R U N E
+       __             __
+      (  \__~-(O)-~__/  )]]
+
+	os.execute("clear")
+	io.write("\27[0;1m\27[2;", tw/2-14, "H", logo:gsub("\n", "\n" .. (" "):rep(tw/2-14)).."")
+	io.write("\27[0m\27[12;1H    By Mostafa Tarek Mortada\n\n\n    Press enter to begin game\n    Options and configuration in `config.lua`\n\n")
+	io.read()
+end
+
+title(term_dim())
+
+--require("src.title") -- Display title screen
 
 local MAP_WIDTH, MAP_HEIGHT = 140, 44
 
@@ -166,12 +199,6 @@ while true do
 		io.write("\27[1;20HFloor ",floor)
 		io.write("\27[1;40HTurn ",turn)
 
-		io.write("\27[19;72Hy k u")
-		io.write("\27[20;72H \\|/")
-		io.write("\27[21;72Hh-@-l")
-		io.write("\27[22;72H /|\\")
-		io.write("\27[23;72Hb j n")
-
 		--io.write("\27[23;1HPos: ",player.x," , ",player.y," ")
 		--io.write("\27[24;1H",flavor, (" "):rep(80-flavor:len()))
 		io.write("\27[24;1HStanding on ",TILENAMES[map[player.y][player.x]] or ERR.tilename_nil, (" "):rep(67-(TILENAMES[map[player.y][player.x]] or ERR.tilename_nil):len()))
@@ -207,11 +234,14 @@ while true do
 			--player.y = math.max(0, math.min(MAP_HEIGHT, player.y + (act=="DOWN" and 1 or act=="UP" and -1 or 0)))
 
 			if act == "DOOR" then
-				for i = -1, 1 do
-					if map[player.y][player.x+i] == 6 then map[player.y][player.x+i] = 7
-					elseif map[player.y][player.x+i] == 7 then map[player.y][player.x+i] = 6 end
-					if map[player.y+i][player.x] == 6 then map[player.y+i][player.x] = 7
-					elseif map[player.y+i][player.x] == 7 then map[player.y+i][player.x] = 6 end
+				local dir = ask_direction("Open/close door")
+				if dir ~= "SYS: ESCAPE" then
+					local ix, iy = 0, 0
+					ix = (dir=="LEFT" or dir=="UP LEFT" or dir=="DOWN LEFT") and -1 or (dir=="RIGHT" or dir=="UP RIGHT" or dir == "DOWN RIGHT") and 1 or 0
+					iy = (dir=="UP" or dir=="UP LEFT" or dir=="UP RIGHT") and -1 or (dir=="DOWN" or dir=="DOWN LEFT" or dir == "DOWN RIGHT") and 1 or 0
+
+					if map[player.y+iy][player.x+ix] == 6 then map[player.y+iy][player.x+ix] = 7
+					elseif map[player.y+iy][player.x+ix] == 7 then map[player.y+iy][player.x+ix] = 6 end
 				end
 			end
 
@@ -281,7 +311,7 @@ while true do
 					local a = C.key[i]
 					x = math.max(1, math.min(MAP_WIDTH , x + ((a=="RIGHT" or a=="UP RIGHT" or a=="DOWN RIGHT") and 1 or (a=="LEFT" or a=="UP LEFT" or a=="DOWN LEFT") and -1 or 0)))
 					y = math.max(1, math.min(MAP_HEIGHT, y + ((a=="DOWN" or a=="DOWN LEFT" or a=="DOWN RIGHT") and 1 or (a=="UP" or a=="UP LEFT" or a=="UP RIGHT") and -1 or 0)))
-				until i == "\27"
+				until C.key[i] == "SYS: ESCAPE"
 				os.execute("clear")
 			end
 

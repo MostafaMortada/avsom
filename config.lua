@@ -45,6 +45,7 @@ return {
 
 		["-"] = "INSPECT",
 
+		["\27"] = "SYS: ESCAPE",
 		C = "SYS: CLEAR SCREEN",
 		Q = "SYS: QUIT GAME",
 	}
