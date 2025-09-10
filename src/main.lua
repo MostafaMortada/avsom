@@ -1,9 +1,8 @@
--- ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-
 local C = require("config")
 local ERR = require("src.error_messages")
 local TILE = require("tilesets." .. C.tileset)
-local TILENAMES = require("src.tilenames")
+local TILE_NAMES = require("src.tile_names")
+local TILE_PROP = require("src.tile_properties")
 local GENERATE_FLOOR = require("src.gen." .. C.generator)
 local getch = require("src." .. C.input)
 
@@ -64,8 +63,6 @@ end
 
 title(term_dim())
 
---require("src.title") -- Display title screen
-
 local MAP_WIDTH, MAP_HEIGHT = 140, 44
 
 math.randomseed(os.time())
@@ -78,7 +75,6 @@ local turn = 0
 
 local player = {
 	x = 0, y = 0,
-
 
 	exp = 0,
 	lvl = 1,
@@ -100,8 +96,6 @@ end
 inv[1] = {id=1, n=23}
 local equip = {[1]=1}
 
---local flavor = "Welcome!"
-
 local S = " "
 local CLEAR_STR = "\27[1;1H" .. S:rep(79) .. "\27[24;1H" .. S:rep(79) .. "\27[2;71H" .. (S:rep(9).."\27[9D\27[B"):rep(22)
 
@@ -109,10 +103,9 @@ while true do
 	local floorseed = seed * 1000 + floor
 	wrl[floor] = wrl[floor] or {}
 	if not wrl[floor].a then
-		wrl[floor].px, wrl[floor].py, wrl[floor].map, wrl[floor].shade, wrl[floor].radius, wrl[floor].stt = GENERATE_FLOOR(floorseed, 140, 44)
+		wrl[floor].px, wrl[floor].py, wrl[floor].map, wrl[floor].shade, wrl[floor].radius, wrl[floor].stt = GENERATE_FLOOR(floorseed, MAP_WIDTH, MAP_HEIGHT)
 		wrl[floor].a = 0
 	end
-	--player.x, player.y = GENERATE_FLOOR(floorseed, 140, 44)
 	local map, shade, vis_radius, stt = wrl[floor].map, wrl[floor].shade, wrl[floor].radius, wrl[floor].stt
 	player.x, player.y = wrl[floor].px, wrl[floor].py
 
@@ -128,16 +121,7 @@ while true do
 		sx = math.max(0, math.min(MAP_WIDTH -70, player.x-35))
 		sy = math.max(0, math.min(MAP_HEIGHT-22, player.y-11))
 
-		--io.write(CLEAR_STR)
-
-		-- this loop uncovers tiles in the player's radius
-		--[[for r = math.max(1, player.y-vis_radius[player.y][player.x]), math.min(MAP_HEIGHT, player.y+vis_radius[player.y][player.x]) do
-			for c = math.max(1, player.x-vis_radius[player.y][player.x]), math.min(MAP_WIDTH, player.x+vis_radius[player.y][player.x]) do
-				shade[r][c] = 0
-			end
-		end]]
-
-		do
+		do -- Raycaster to reveal tiles in player's radius
 			for i = 0, math.pi * 2, math.pi/180 * 4.5 do
 				local rx, ry, ix, iy = player.x, player.y, math.cos(i), math.sin(i)
 				local c
@@ -149,12 +133,6 @@ while true do
 				until c == 1 or c == 6 or math.sqrt((player.y - ry)^2 + (player.x - rx)^2)>=(vis_radius[player.y][player.x]-1)
 			end
 		end
-
-		--[[for r = math.max(1, player.y-vis_radius[player.y][player.x]), math.min(MAP_HEIGHT, player.y+vis_radius[player.y][player.x]) do
-			for c = math.max(1, player.x-vis_radius[player.y][player.x]), math.min(MAP_WIDTH, player.x+vis_radius[player.y][player.x]) do
-				shade[r][c] = 0
-			end
-		end]]
 
 		io.write("\27[2;1H")
 		for r = 1+sy, 22+sy do
@@ -168,29 +146,6 @@ while true do
 			end
 			io.write("\n")
 		end
-
---[[
-		io.write("\27[3;2H")
-		for r = 2+sy, 21+sy do
-			for c = 2+sx, 69+sx do
-				io.write("\27[0m")
-				if shade[r][c] then
-					if map[r][c] == 1 then
-						io.write("\27[1m")
-						if map[r][c-1] == 2 or map[r][c+1] == 2 then
-							io.write("|")
-						else
-							io.write("-")
-						end
-					else
-						io.write(TILE[map[r][c] ])
-					end
-				else
-					io.write(" ")
-				end
-			end
-			io.write("\n ")
-		end]]
 
 		-- Draw stats on the side of the screen
 		io.write("\27[0m\27[2;71H LVL ",player.lvl)
@@ -207,7 +162,7 @@ while true do
 
 		--io.write("\27[23;1HPos: ",player.x," , ",player.y," ")
 		--io.write("\27[24;1H",flavor, (" "):rep(80-flavor:len()))
-		io.write("\27[24;1HStanding on ",TILENAMES[map[player.y][player.x]] or ERR.tilename_nil, (" "):rep(67-(TILENAMES[map[player.y][player.x]] or ERR.tilename_nil):len()))
+		io.write("\27[24;1HStanding on ",TILE_NAMES[map[player.y][player.x]] or ERR.tilename_nil, (" "):rep(67-(TILE_NAMES[map[player.y][player.x]] or ERR.tilename_nil):len()))
 
 		io.write("\27[", player.y-sy+1, ";", player.x-sx, "H\27[0;1m@\27[1;1H")
 
@@ -222,24 +177,12 @@ while true do
 			or act == "UP LEFT" or act == "DOWN LEFT" or act == "UP RIGHT" or act == "DOWN RIGHT" then
 				turn = turn + 1
 			end
-			-- the following 4 lines scroll the camera when the player approaches the edge of the screen
-			--[[if player.x-sx<=10 then sx = sx - 10 end
-			if player.x-sx>=60 then sx = sx + 10 end
-			if player.y-sy<=5 then sy = sy - 7 end
-			if player.y-sy>=15 then sy = sy + 7 end
-
-			-- clamping
-			sx = math.max(0, math.min(MAP_WIDTH -70, sx))
-			sy = math.max(0, math.min(MAP_HEIGHT-22, sy))]]
 
 			local prev_px, prev_py = player.x, player.y
 
 			-- Move player
 			player.x = math.max(0, math.min(MAP_WIDTH , player.x + ((act=="RIGHT" or act=="UP RIGHT" or act=="DOWN RIGHT") and 1 or (act=="LEFT" or act=="UP LEFT" or act=="DOWN LEFT") and -1 or 0)))
 			player.y = math.max(0, math.min(MAP_HEIGHT, player.y + ((act=="DOWN" or act=="DOWN LEFT" or act=="DOWN RIGHT") and 1 or (act=="UP" or act=="UP LEFT" or act=="UP RIGHT") and -1 or 0)))
-			--player.x = math.max(0, math.min(MAP_WIDTH , player.x + (act=="RIGHT" and 1 or act=="LEFT" and -1 or 0)))
-			--player.y = math.max(0, math.min(MAP_HEIGHT, player.y + (act=="DOWN" and 1 or act=="UP" and -1 or 0)))
-
 
 			if act == "INTERACT" then
 				local t = map[player.y][player.x]
@@ -264,7 +207,11 @@ while true do
 				end
 			end
 
-			if map[player.y][player.x] == 1 or map[player.y][player.x] == 3 or map[player.y][player.x] == 6 then -- Collision
+-- 			if map[player.y][player.x] == 1 or map[player.y][player.x] == 3 or map[player.y][player.x] == 6 then -- Collision
+-- 				player.x, player.y = prev_px, prev_py
+-- 			end
+
+			if TILE_PROP[map[player.y][player.x]].wall then -- Collision
 				player.x, player.y = prev_px, prev_py
 			end
 
@@ -315,7 +262,7 @@ while true do
 					end
 
 					if shade[y][x] then
-						io.write("\27[24;1HHighlighted:",TILENAMES[map[y][x]] or ERR.tilename_nil, (" "):rep(67-(TILENAMES[map[y][x]] or ERR.tilename_nil):len()))
+						io.write("\27[24;1HHighlighted:",TILE_NAMES[map[y][x]] or ERR.tilename_nil, (" "):rep(67-(TILE_NAMES[map[y][x]] or ERR.tilename_nil):len()))
 					else
 						io.write("\27[24;1HHighlighted:                                                                   ")
 					end
