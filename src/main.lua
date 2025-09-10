@@ -106,9 +106,15 @@ local S = " "
 local CLEAR_STR = "\27[1;1H" .. S:rep(79) .. "\27[24;1H" .. S:rep(79) .. "\27[2;71H" .. (S:rep(9).."\27[9D\27[B"):rep(22)
 
 while true do
+	local floorseed = seed * 1000 + floor
 	wrl[floor] = wrl[floor] or {}
-	player.x, player.y, wrl[floor].map, wrl[floor].shade, wrl[floor].radius, wrl[floor].stt = GENERATE_FLOOR(0, 140, 44)
+	if not wrl[floor].a then
+		wrl[floor].px, wrl[floor].py, wrl[floor].map, wrl[floor].shade, wrl[floor].radius, wrl[floor].stt = GENERATE_FLOOR(floorseed, 140, 44)
+		wrl[floor].a = 0
+	end
+	--player.x, player.y = GENERATE_FLOOR(floorseed, 140, 44)
 	local map, shade, vis_radius, stt = wrl[floor].map, wrl[floor].shade, wrl[floor].radius, wrl[floor].stt
+	player.x, player.y = wrl[floor].px, wrl[floor].py
 
 	-- player in the center of the camera
 	local sx = math.max(0, math.min(MAP_WIDTH -70, player.x-35))
@@ -207,6 +213,7 @@ while true do
 
 		key = getch()
 		check_term_dim()
+		wrl[floor].px, wrl[floor].py = player.x, player.y
 
 		local act = C.key[key]
 
@@ -232,6 +239,18 @@ while true do
 			player.y = math.max(0, math.min(MAP_HEIGHT, player.y + ((act=="DOWN" or act=="DOWN LEFT" or act=="DOWN RIGHT") and 1 or (act=="UP" or act=="UP LEFT" or act=="UP RIGHT") and -1 or 0)))
 			--player.x = math.max(0, math.min(MAP_WIDTH , player.x + (act=="RIGHT" and 1 or act=="LEFT" and -1 or 0)))
 			--player.y = math.max(0, math.min(MAP_HEIGHT, player.y + (act=="DOWN" and 1 or act=="UP" and -1 or 0)))
+
+
+			if act == "INTERACT" then
+				local t = map[player.y][player.x]
+				if t == 5 then
+					floor = floor + 1
+					break
+				elseif t == 4 and floor ~= 1 then
+					floor = floor - 1
+					break
+				end
+			end
 
 			if act == "DOOR" then
 				local dir = ask_direction("Open/close door")
